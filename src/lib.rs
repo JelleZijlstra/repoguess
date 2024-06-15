@@ -45,6 +45,7 @@ struct Params {
     cg_boost: f64,
     author_boost: f64,
     year_factor: f64,
+    year_boost: f64,
     score_cutoff: f64,
     probability_cutoff: f64,
 }
@@ -57,6 +58,7 @@ impl Params {
         cg_boost: f64,
         author_boost: f64,
         year_factor: f64,
+        year_boost: f64,
         score_cutoff: f64,
         probability_cutoff: f64,
     ) -> Self {
@@ -65,6 +67,7 @@ impl Params {
             cg_boost,
             author_boost,
             year_factor,
+            year_boost,
             score_cutoff,
             probability_cutoff,
         }
@@ -72,8 +75,8 @@ impl Params {
 
     fn __repr__(&self) -> PyResult<String> {
         Ok(format!(
-            "Params(country_boost={:.3}, cg_boost={:.3}, author_boost={:.3}, year_factor={:.3}, score_cutoff={:.3}, probability_cutoff={:.3})",
-            self.country_boost, self.cg_boost, self.author_boost, self.year_factor, self.score_cutoff, self.probability_cutoff
+            "Params(country_boost={:.3}, cg_boost={:.3}, author_boost={:.3}, year_factor={:.3}, year_boost={:3}, score_cutoff={:.3}, probability_cutoff={:.3})",
+            self.country_boost, self.cg_boost, self.author_boost, self.year_factor, self.year_boost, self.score_cutoff, self.probability_cutoff
         ))
     }
 }
@@ -108,9 +111,7 @@ fn get_score(nam1: &NameData, nam2: &NameData, params: &Params) -> PyResult<f64>
         }
     }
     let year_difference = (nam1.year - nam2.year).abs();
-    let root = (year_difference as f64).sqrt();
-    let year_boost = 1.0 - (root / params.year_factor);
-    score *= year_boost;
+    score *= (1.0 / params.year_factor.powf(year_difference as f64)) * params.year_boost;
     return Ok(score);
 }
 
@@ -141,8 +142,20 @@ fn get_probs_impl(data: &NameData, train_data: &Vec<Bound<'_, NameData>>, params
 }
 
 #[pyfunction]
-fn get_top_choice(data: &NameData, train_data: Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<i32> {
-    return get_top_choice_impl(data, &train_data, params);
+fn get_top_choice(data: &NameData, train_data: Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<Option<(i32, f64)>> {
+    let probs = get_probs_impl(data, &train_data, params)?;
+    let mut top_choice: i32 = -1;
+    let mut top_score: f64 = params.probability_cutoff;
+    for (key, value) in probs.iter() {
+        if *value > top_score {
+            top_choice = *key;
+            top_score = *value;
+        }
+    }
+    if top_choice == -1 {
+        return Ok(None);
+    }
+    return Ok(Some((top_choice, top_score)));
 }
 
 fn get_top_choice_impl(data: &NameData, train_data: &Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<i32> {
