@@ -95,8 +95,7 @@ fn get_score(nam1: &NameData, nam2: &NameData, params: &Params) -> PyResult<f64>
     }
     if nam1.authors == nam2.authors {
         score *= params.author_boost;
-    }
-    else {
+    } else {
         // Faster than using sets since usually it's a small number of authors
         let mut shared_authors = 0;
         for author in &nam1.authors {
@@ -114,11 +113,19 @@ fn get_score(nam1: &NameData, nam2: &NameData, params: &Params) -> PyResult<f64>
 }
 
 #[pyfunction]
-fn get_probs(data: &NameData, train_data: Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<std::collections::HashMap<i32, f64>> {
+fn get_probs(
+    data: &NameData,
+    train_data: Vec<Bound<'_, NameData>>,
+    params: &Params,
+) -> PyResult<std::collections::HashMap<i32, f64>> {
     return get_probs_impl(data, &train_data, params);
 }
 
-fn get_probs_impl(data: &NameData, train_data: &Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<std::collections::HashMap<i32, f64>> {
+fn get_probs_impl(
+    data: &NameData,
+    train_data: &Vec<Bound<'_, NameData>>,
+    params: &Params,
+) -> PyResult<std::collections::HashMap<i32, f64>> {
     let mut scores: std::collections::HashMap<i32, f64> = std::collections::HashMap::new();
     let mut highest_score: f64 = 1.0;
     for train_datum in train_data {
@@ -140,7 +147,11 @@ fn get_probs_impl(data: &NameData, train_data: &Vec<Bound<'_, NameData>>, params
 }
 
 #[pyfunction]
-fn get_top_choice(data: &NameData, train_data: Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<Option<(i32, f64)>> {
+fn get_top_choice(
+    data: &NameData,
+    train_data: Vec<Bound<'_, NameData>>,
+    params: &Params,
+) -> PyResult<Option<(i32, f64)>> {
     let probs = get_probs_impl(data, &train_data, params)?;
     let mut top_choice: i32 = -1;
     let mut top_score: f64 = params.probability_cutoff;
@@ -156,7 +167,11 @@ fn get_top_choice(data: &NameData, train_data: Vec<Bound<'_, NameData>>, params:
     return Ok(Some((top_choice, top_score)));
 }
 
-fn get_top_choice_impl(data: &NameData, train_data: &Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<i32> {
+fn get_top_choice_impl(
+    data: &NameData,
+    train_data: &Vec<Bound<'_, NameData>>,
+    params: &Params,
+) -> PyResult<i32> {
     let probs = get_probs_impl(data, train_data, params)?;
     let mut top_choice: i32 = -1;
     let mut top_score: f64 = params.probability_cutoff;
@@ -190,11 +205,19 @@ impl ScoreInfo {
 }
 
 #[pyfunction]
-fn evaluate_model(train_data: Vec<Bound<'_, NameData>>, test_data: Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<ScoreInfo> {
+fn evaluate_model(
+    train_data: Vec<Bound<'_, NameData>>,
+    test_data: Vec<Bound<'_, NameData>>,
+    params: &Params,
+) -> PyResult<ScoreInfo> {
     return evaluate_model_impl(&train_data, &test_data, params);
 }
 
-fn evaluate_model_impl(train_data: &Vec<Bound<'_, NameData>>, test_data: &Vec<Bound<'_, NameData>>, params: &Params) -> PyResult<ScoreInfo> {
+fn evaluate_model_impl(
+    train_data: &Vec<Bound<'_, NameData>>,
+    test_data: &Vec<Bound<'_, NameData>>,
+    params: &Params,
+) -> PyResult<ScoreInfo> {
     let mut correct: i32 = 0;
     let mut incorrect: i32 = 0;
     let mut no_value: i32 = 0;
@@ -211,14 +234,12 @@ fn evaluate_model_impl(train_data: &Vec<Bound<'_, NameData>>, test_data: &Vec<Bo
         }
     }
     let score = correct - (incorrect * FALSE_POSITIVE_COST);
-    return Ok(
-        ScoreInfo {
-            score,
-            correct,
-            incorrect,
-            no_value,
-        }
-    );
+    return Ok(ScoreInfo {
+        score,
+        correct,
+        incorrect,
+        no_value,
+    });
 }
 
 #[pymodule]
