@@ -81,6 +81,30 @@ impl Params {
     }
 }
 
+#[pyclass(get_all, frozen)]
+struct ScoringFunction {
+    false_positive_cost: f64,
+    false_negative_cost: f64,
+}
+
+#[pymethods]
+impl ScoringFunction {
+    #[new]
+    fn new(false_positive_cost: f64, false_negative_cost: f64) -> Self {
+        ScoringFunction {
+            false_positive_cost,
+            false_negative_cost,
+        }
+    }
+
+    fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "ScoringFunction(false_positive_cost={}, false_negative_cost={})",
+            self.false_positive_cost, self.false_negative_cost
+        ))
+    }
+}
+
 #[pyfunction]
 fn get_score(nam1: &NameData, nam2: &NameData, params: &Params) -> PyResult<f64> {
     if nam1.name_id == nam2.name_id {
@@ -184,11 +208,9 @@ fn get_top_choice_impl(
     return Ok(top_choice);
 }
 
-const FALSE_POSITIVE_COST: i32 = 10;
-
 #[pyclass(get_all, frozen)]
 struct ScoreInfo {
-    score: i32,
+    score: f64,
     correct: i32,
     incorrect: i32,
     no_value: i32,
@@ -208,14 +230,16 @@ impl ScoreInfo {
 fn evaluate_model(
     train_data: Vec<Bound<'_, NameData>>,
     test_data: Vec<Bound<'_, NameData>>,
+    scoring_function: &ScoringFunction,
     params: &Params,
 ) -> PyResult<ScoreInfo> {
-    return evaluate_model_impl(&train_data, &test_data, params);
+    return evaluate_model_impl(&train_data, &test_data, scoring_function, params);
 }
 
 fn evaluate_model_impl(
     train_data: &Vec<Bound<'_, NameData>>,
     test_data: &Vec<Bound<'_, NameData>>,
+    scoring_function: &ScoringFunction,
     params: &Params,
 ) -> PyResult<ScoreInfo> {
     let mut correct: i32 = 0;
@@ -233,7 +257,9 @@ fn evaluate_model_impl(
             incorrect += 1;
         }
     }
-    let score = correct - (incorrect * FALSE_POSITIVE_COST);
+    let score = (correct as f64)
+        - ((incorrect as f64) * scoring_function.false_positive_cost)
+        - ((no_value as f64) * scoring_function.false_negative_cost);
     return Ok(ScoreInfo {
         score,
         correct,
@@ -251,5 +277,6 @@ fn typeinfer(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<NameData>()?;
     m.add_class::<Params>()?;
     m.add_class::<ScoreInfo>()?;
+    m.add_class::<ScoringFunction>()?;
     Ok(())
 }
