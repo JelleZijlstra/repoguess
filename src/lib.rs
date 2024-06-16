@@ -75,7 +75,7 @@ impl Params {
 
     fn __repr__(&self) -> PyResult<String> {
         Ok(format!(
-            "Params(country_boost={:.3}, cg_boost={:.3}, author_boost={:.3}, year_factor={:.3}, year_boost={:3}, score_cutoff={:.3}, probability_cutoff={:.3})",
+            "Params(country_boost={:.3}, cg_boost={:.3}, author_boost={:.3}, year_factor={:.3}, year_boost={:.3}, score_cutoff={:.3}, probability_cutoff={:.3})",
             self.country_boost, self.cg_boost, self.author_boost, self.year_factor, self.year_boost, self.score_cutoff, self.probability_cutoff
         ))
     }
@@ -104,10 +104,8 @@ fn get_score(nam1: &NameData, nam2: &NameData, params: &Params) -> PyResult<f64>
                 shared_authors += 1;
             }
         }
-        let total_authors = nam1.authors.len() + nam2.authors.len() - shared_authors;
-        let overlap_prop = (shared_authors as f64) / (total_authors as f64);
-        if overlap_prop > 0.0 {
-            score *= overlap_prop * params.author_boost;
+        if shared_authors > 0 {
+            score *= params.author_boost;
         }
     }
     let year_difference = (nam1.year - nam2.year).abs();
