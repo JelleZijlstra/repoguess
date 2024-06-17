@@ -269,7 +269,7 @@ fn evaluate_model_impl(
 }
 
 #[pymodule]
-fn typeinfer(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn repoguess(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_score, m)?)?;
     m.add_function(wrap_pyfunction!(get_probs, m)?)?;
     m.add_function(wrap_pyfunction!(get_top_choice, m)?)?;
